@@ -76,8 +76,8 @@ def main(args):
     training_arguments = TrainingArguments(
         output_dir = args.output_dir,
         num_train_epochs=1, #Start with 1 epoch
-        per_device_train_batch_size=4, #Batch size
-        gradient_accumulation_steps=1,
+        per_device_train_batch_size=2, #Batch size
+        gradient_accumulation_steps=2,
         optim="paged_adamw_32bit",
         save_steps=100, #Save a checkpoint every 50 steps
         logging_steps=10, # Log progress every 10 steps
@@ -99,7 +99,7 @@ def main(args):
         train_dataset=dataset,
         peft_config=peft_config,
         dataset_text_field="text",
-        #max_seq_length=512,
+        max_seq_length=512,
         tokenizer=tokenizer,
         args=training_arguments,
     )
