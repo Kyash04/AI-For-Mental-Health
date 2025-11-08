@@ -5,7 +5,6 @@ from datasets import Dataset, load_dataset
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
-    BitsAndBytesConfig,
     TrainingArguments,
 )
 from peft import LoraConfig
@@ -37,19 +36,20 @@ def main(args):
     #Loading the base model
     base_model = args.base_model
 
-    # Configuring 4-bit quantization (to save memory)
-    bnb_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.bfloat16,
-        bnb_4bit_use_double_quant=False,
-    )
+    # # Configuring 4-bit quantization (to save memory)
+    # bnb_config = BitsAndBytesConfig(
+    #     load_in_4bit=True,
+    #     bnb_4bit_quant_type="nf4",
+    #     bnb_4bit_compute_dtype=torch.bfloat16,
+    #     bnb_4bit_use_double_quant=False,
+    # )
 
     #Loading model with quantization
     print(f"Loading Model: {base_model}")
     model = AutoModelForCausalLM.from_pretrained(
         base_model,
-        quantization_config=bnb_config,
+        # quantization_config=bnb_config,
+        torch_dtype=torch.float16,
         trust_remote_code=True,
         device_map="auto" #Automatically uses the Colab GPU
     )
