@@ -10,6 +10,9 @@ from transformers import (
 )
 from peft import LoraConfig
 from trl import SFTTrainer
+import os
+
+os.environ["WANDB_DISABLED"] = "true"
 
 def format_prompt(row):
     system_prompt = ( "You are HealthMate, a friendly and supportive mental health assistant. " "Respond with empathy, understanding, and provide helpful, safe advice. "
@@ -51,6 +54,7 @@ def main(args):
         device_map="auto" #Automatically uses the Colab GPU
     )
     model.config.use_cache = False
+    model.config.pretraining_tp = 1
 
     # Loading the tokenizer
     tokenizer = AutoTokenizer.from_pretrained(base_model, trust_remote_code=True)
@@ -75,7 +79,7 @@ def main(args):
         per_device_train_batch_size=4, #Batch size
         gradient_accumulation_steps=1,
         optim="paged_adamw_32bit",
-        save_steps=50, #Save a checkpoint every 50 steps
+        save_steps=100, #Save a checkpoint every 50 steps
         logging_steps=10, # Log progress every 10 steps
         learning_rate=2e-4,
         weight_decay=0.001,
@@ -83,10 +87,10 @@ def main(args):
         bf16=True, #Use bf16 for speed on new GPU
         max_grad_norm=0.3,
         max_steps=-1,
-        max_seq_length=512,
         warmup_ratio=0.03,
         group_by_length=True,
         lr_scheduler_type="cosine",
+        report_to="none"
     )
 
     #Initializing the SFTTrainer (Supervised Fine-Tuning Trainer)
@@ -94,8 +98,8 @@ def main(args):
         model=model,
         train_dataset=dataset,
         peft_config=peft_config,
-        # dataset_text_field="text", # To match the output of our format_prompt function
-        # max_seq_length=512, #Max length of a single training example
+        dataset_text_field="text",
+        max_seq_length=512,
         tokenizer=tokenizer,
         args=training_arguments,
     )
