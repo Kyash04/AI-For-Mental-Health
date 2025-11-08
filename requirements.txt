@@ -1,0 +1,12 @@
+torch
+tkinter
+transformer
+numpy
+pandas
+textblob
+datasets
+peft
+trl
+bitsandbytes
+accelerate
+kaggle
