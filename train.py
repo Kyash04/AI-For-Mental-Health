@@ -83,6 +83,7 @@ def main(args):
         bf16=True, #Use bf16 for speed on new GPU
         max_grad_norm=0.3,
         max_steps=-1,
+        max_seq_length=512,
         warmup_ratio=0.03,
         group_by_length=True,
         lr_scheduler_type="cosine",
@@ -94,7 +95,7 @@ def main(args):
         train_dataset=dataset,
         peft_config=peft_config,
         # dataset_text_field="text", # To match the output of our format_prompt function
-        max_seq_length=512, #Max length of a single training example
+        # max_seq_length=512, #Max length of a single training example
         tokenizer=tokenizer,
         args=training_arguments,
     )
