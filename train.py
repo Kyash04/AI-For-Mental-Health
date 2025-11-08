@@ -93,7 +93,7 @@ def main(args):
         model=model,
         train_dataset=dataset,
         peft_config=peft_config,
-        dataset_text_field="text", # To match the output of our format_prompt function
+        # dataset_text_field="text", # To match the output of our format_prompt function
         max_seq_length=512, #Max length of a single training example
         tokenizer=tokenizer,
         args=training_arguments,
