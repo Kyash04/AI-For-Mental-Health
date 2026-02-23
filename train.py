@@ -3,7 +3,7 @@ import re
 import torch
 import argparse
 import pandas as pd
-from datasets import Dataset
+from datasets import Dataset, load_dataset
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
@@ -60,44 +60,82 @@ def format_prompt(row: dict) -> dict:
 
 # ── Data loading + cleaning ────────────────────────────────────────────
 def load_and_prepare_dataset(data_file_path: str, val_split: float = 0.1):
-    print(f"Loading dataset from: {data_file_path}")
-    df = pd.read_csv(data_file_path, encoding='utf-8', on_bad_lines='skip')
+    """
+    Tries to load a clean HuggingFace dataset first.
+    Falls back to your local CSV if the HF dataset is unavailable.
+    """
 
-    # Normalise column names (handles Context/context/Question etc.)
-    df.columns = [c.strip().lower() for c in df.columns]
-    col_map = {}
-    for c in df.columns:
-        if any(k in c for k in ['context', 'question', 'input']):
-            col_map[c] = 'context'
-        elif any(k in c for k in ['response', 'answer', 'output']):
-            col_map[c] = 'response'
-    df = df.rename(columns=col_map)
+    # ── OPTION A: Clean HuggingFace dataset (recommended) ───────────
+    # 'Amod/mental_health_counseling_conversations' is:
+    #   - Already clean conversational format
+    #   - ~3,500 real counseling Q&A pairs
+    #   - No encoding artifacts or truncated rows
+    #   - Responses are 1-3 paragraphs (appropriate length)
+    try:
+        print("Loading clean dataset from HuggingFace...")
+        hf = load_dataset("Amod/mental_health_counseling_conversations", split="train")
+        df = pd.DataFrame(hf)
 
-    if 'context' not in df.columns or 'response' not in df.columns:
-        raise ValueError(
-            f"Could not find context/response columns. Found: {df.columns.tolist()}"
-        )
+        # This dataset uses 'Context' and 'Response' columns already
+        df.columns = [c.strip().lower() for c in df.columns]
+        df = df.rename(columns={'context': 'context', 'response': 'response'})
+        print(f"HuggingFace dataset loaded: {len(df)} rows")
+        use_hf = True
 
+    except Exception as e:
+        print(f"  HuggingFace load failed ({e}), falling back to local CSV...")
+        use_hf = False
+
+    # ── OPTION B: Your local CSV (fallback) ─────────────────────────
+    if not use_hf:
+        print(f"Loading local dataset from: {data_file_path}")
+        df = pd.read_csv(data_file_path, encoding='utf-8', on_bad_lines='skip')
+        df.columns = [c.strip().lower() for c in df.columns]
+        col_map = {}
+        for c in df.columns:
+            if any(k in c for k in ['context', 'question', 'input']):
+                col_map[c] = 'context'
+            elif any(k in c for k in ['response', 'answer', 'output']):
+                col_map[c] = 'response'
+        df = df.rename(columns=col_map)
+
+    # ── Shared cleaning (applied to both sources) ────────────────────
     df = df[['context', 'response']].copy()
     df['context']  = df['context'].apply(clean_text)
     df['response'] = df['response'].apply(clean_text)
 
-    # ── Quality filters ──────────────────────────────────────────────
     before = len(df)
-    df = df[df['context'].str.len() > 30]                           # Drop truncated contexts
-    df = df[df['response'].str.len() > 20]                          # Drop near-empty responses
-    df = df[~df['context'].str.strip().str.lower()                  # Drop "I'm going through" rows
-              .str.startswith("i'm going through")]
-    df = df[~df['response'].str.contains(r'Â|\xa0', na=False)]     # Remove remaining artifacts
-    df = df.drop_duplicates(subset='context')                       # Remove duplicate prompts
-    df['response'] = df['response'].apply(truncate_at_sentence)     # Cap response length
+    df = df[df['context'].str.len() > 30]
+    df = df[df['response'].str.len() > 20]
+    df = df[~df['context'].str.strip().str.lower().str.startswith("i'm going through")]
+    df = df[~df['response'].str.contains(r'Â|\xa0', na=False)]
+
+    # ── EXTRA FILTERS to remove podcast/script/letter format rows ────
+    # These patterns in your Kaggle CSV caused the hallucinations
+    bad_response_patterns = [
+        r'^\s*dear\s+\w+',              # "Dear Anxious One,"
+        r'background music',             # Podcast scripts
+        r'voiceover',
+        r'music (starts|plays)',
+        r'^\s*intro\s*:',
+        r'^\s*\(',                        # Lines starting with stage directions (Music...)
+        r'sincerely,',                    # Letter sign-offs
+        r'best regards,',
+        r'yours truly,',
+    ]
+    combined_pattern = '|'.join(bad_response_patterns)
+    df = df[~df['response'].str.lower().str.contains(combined_pattern, regex=True, na=False)]
+
+    df = df.drop_duplicates(subset='context')
+    df['response'] = df['response'].apply(truncate_at_sentence)
     df = df.reset_index(drop=True)
 
-    print(f"Dataset: {before} raw rows → {len(df)} clean rows")
-    if len(df) < 200:
-        print("⚠️  WARNING: Very few rows after cleaning. Consider a larger/cleaner dataset.")
+    print(f"Dataset: {before} raw rows → {len(df)} clean rows after all filters")
 
-    # ── Format + FIX 4: train/val split ─────────────────────────────
+    if len(df) < 200:
+        print("  WARNING: Very few rows remain. Check your dataset source.")
+
+    # ── Format + split ────────────────────────────────────────────────
     dataset = Dataset.from_pandas(df)
     dataset = dataset.map(format_prompt, remove_columns=['context', 'response'])
     split   = dataset.train_test_split(test_size=val_split, seed=42)
