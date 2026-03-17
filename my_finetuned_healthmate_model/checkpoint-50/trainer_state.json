@@ -1,0 +1,64 @@
+{
+  "best_metric": 2.46783709526062,
+  "best_model_checkpoint": "/content/drive/MyDrive/my_finetuned_healthmate_model/checkpoint-50",
+  "epoch": 1.0695187165775402,
+  "eval_steps": 50,
+  "global_step": 50,
+  "is_hyper_param_search": false,
+  "is_local_process_zero": true,
+  "is_world_process_zero": true,
+  "log_history": [
+    {
+      "epoch": 0.21390374331550802,
+      "grad_norm": 0.6688230037689209,
+      "learning_rate": 0.00019837448439320027,
+      "loss": 2.8163,
+      "step": 10
+    },
+    {
+      "epoch": 0.42780748663101603,
+      "grad_norm": 0.588091254234314,
+      "learning_rate": 0.00018568571761675893,
+      "loss": 2.5569,
+      "step": 20
+    },
+    {
+      "epoch": 0.6417112299465241,
+      "grad_norm": 0.5443808436393738,
+      "learning_rate": 0.0001619448361215723,
+      "loss": 2.4878,
+      "step": 30
+    },
+    {
+      "epoch": 0.8556149732620321,
+      "grad_norm": 0.583651602268219,
+      "learning_rate": 0.00013021404155695725,
+      "loss": 2.4622,
+      "step": 40
+    },
+    {
+      "epoch": 1.0695187165775402,
+      "grad_norm": 0.48084598779678345,
+      "learning_rate": 9.458610914145826e-05,
+      "loss": 2.3875,
+      "step": 50
+    },
+    {
+      "epoch": 1.0695187165775402,
+      "eval_loss": 2.46783709526062,
+      "eval_runtime": 9.6284,
+      "eval_samples_per_second": 8.62,
+      "eval_steps_per_second": 2.181,
+      "step": 50
+    }
+  ],
+  "logging_steps": 10,
+  "max_steps": 92,
+  "num_input_tokens_seen": 0,
+  "num_train_epochs": 2,
+  "save_steps": 50,
+  "total_flos": 2538399288262656.0,
+  "train_batch_size": 4,
+  "trial_name": null,
+  "trial_params": null
+}
